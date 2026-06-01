@@ -73,7 +73,7 @@ canvas{display:block;width:100%;height:100%;image-rendering:pixelated;}
 #dev-btn:hover{background:#e74c3c;color:#fff;}
 
 /* ── 랭킹 패널 ── */
-#ranking-btn{position:fixed;bottom:54px;right:14px;background:#1a0020;border:1px solid #9b59b6;color:#9b59b6;font-family:'Press Start 2P',monospace;font-size:7px;padding:7px 10px;cursor:pointer;z-index:100;display:none;}
+#ranking-btn{display:none;position:fixed;bottom:54px;right:14px;background:#1a0020;border:1px solid #9b59b6;color:#9b59b6;font-family:'Press Start 2P',monospace;font-size:7px;padding:7px 10px;cursor:pointer;z-index:100;}
 #ranking-btn:hover{background:#9b59b6;color:#fff;}
 #ranking-panel{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:9998;overflow:auto;}
 .rank-inner{max-width:560px;margin:40px auto;background:#0a0010;border:3px solid #9b59b6;padding:24px;}
@@ -1443,22 +1443,24 @@ async function handleLogin() {
   const u = document.getElementById('username').value.trim();
   const pw = document.getElementById('password').value.trim();
   if (!u||!pw) { setMsg('닉네임과 비밀번호를 입력하세요','error'); return; }
-  setMsg('확인 중...','');
+  setMsg('로그인 중...','');
   try {
-    const myIP = await getMyIP();
-    if (myIP) {
-      const banned = await apiGet('banned_ips?ip=eq.'+encodeURIComponent(myIP)+'&select=id');
-      if (banned&&banned[0]) { setMsg('접속이 차단되었습니다','error'); return; }
-    }
+    // IP 차단 체크 (banned_ips 테이블 없어도 무시)
+    try {
+      const myIP = await getMyIP();
+      if (myIP) {
+        const banned = await apiGet('banned_ips?ip=eq.'+encodeURIComponent(myIP)+'&select=id');
+        if (banned&&banned[0]) { setMsg('접속이 차단되었습니다','error'); return; }
+      }
+    } catch(ipErr) {}
     const existing = await apiGet('players?username=eq.'+encodeURIComponent(u)+'&select=id,username,score,pizza_count,password_hash');
     if (!existing||!existing[0]) { setMsg('존재하지 않는 계정이에요','error'); return; }
     if (existing[0].password_hash!==btoa(pw)) { setMsg('비밀번호가 틀렸어요','error'); return; }
     player={...existing[0]};
-    if (myIP) await api('PATCH','players?id=eq.'+player.id,{last_seen:new Date().toISOString(), ip:myIP});
-    else await api('PATCH','players?id=eq.'+player.id,{last_seen:new Date().toISOString()});
+    try { await api('PATCH','players?id=eq.'+player.id,{last_seen:new Date().toISOString()}); } catch(e){}
     setMsg('어서오세요, '+u+'!','success');
     setTimeout(startGame, 700);
-  } catch(e) { setMsg('연결 오류: '+e.message,'error'); }
+  } catch(e) { setMsg('연결 오류: '+e.message,'error'); console.error(e); }
 }
 
 async function handleRegister() {
@@ -1466,22 +1468,28 @@ async function handleRegister() {
   const pw = document.getElementById('password').value.trim();
   if (!u||!pw) { setMsg('닉네임과 비밀번호를 입력하세요','error'); return; }
   if (u===pw) { setMsg('닉네임과 비밀번호를 다르게 해주세요!','error'); return; }
-  setMsg('확인 중...','');
+  setMsg('가입 중...','');
   try {
-    const myIP = await getMyIP();
-    if (myIP) {
-      const banned = await apiGet('banned_ips?ip=eq.'+encodeURIComponent(myIP)+'&select=id');
-      if (banned&&banned[0]) { setMsg('접속이 차단되었습니다','error'); return; }
-    }
+    let myIP = null;
+    // IP 차단 체크 (테이블 없어도 무시)
+    try {
+      myIP = await getMyIP();
+      if (myIP) {
+        const banned = await apiGet('banned_ips?ip=eq.'+encodeURIComponent(myIP)+'&select=id');
+        if (banned&&banned[0]) { setMsg('접속이 차단되었습니다','error'); return; }
+      }
+    } catch(ipErr) { /* 무시 */ }
+    
     const existing = await apiGet('players?username=eq.'+encodeURIComponent(u)+'&select=id');
     if (existing&&existing[0]) { setMsg('이미 사용 중인 닉네임이에요','error'); return; }
-    const created = await api('POST','players',{username:u,password_hash:btoa(pw),score:0,pizza_count:0,ip:myIP||null});
-    if (!created||!created[0]) { setMsg('오류가 발생했어요','error'); return; }
-    player={...created[0]};
-    setMsg('계정이 만들어졌어요!','success');
-    await api('PATCH','players?id=eq.'+player.id,{last_seen:new Date().toISOString()});
+    
+    const created = await api('POST','players',{username:u,password_hash:btoa(pw),score:0,pizza_count:0,last_seen:new Date().toISOString()});
+    const newPlayer = Array.isArray(created) ? created[0] : created;
+    if (!newPlayer||!newPlayer.id) { setMsg('가입 실패: 서버 응답 오류','error'); console.error('created:',created); return; }
+    player={...newPlayer};
+    setMsg('계정이 만들어졌어요! 🎉','success');
     setTimeout(startGame, 700);
-  } catch(e) { setMsg('연결 오류: '+e.message,'error'); }
+  } catch(e) { setMsg('서버 연결 실패: '+e.message,'error'); console.error(e); }
 }
 
 function setMsg(t,c){const el=document.getElementById('login-msg');el.textContent=t;el.className='login-msg '+c;}
@@ -1508,7 +1516,7 @@ function startGame() {
   loadOnline();
   requestAnimationFrame(ts=>{ lastTime=ts; loop(ts); });
   setInterval(loadOnline, 10000);
-  setInterval(()=>api('PATCH','players?id=eq.'+player.id,{last_seen:new Date().toISOString()}),30000);
+  setInterval(()=>{ try{api('PATCH','players?id=eq.'+player.id,{last_seen:new Date().toISOString()})}catch(e){} },15000);
 }
 
 function logout() {
