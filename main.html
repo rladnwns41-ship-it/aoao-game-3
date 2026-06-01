@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍕 피자 가게</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:#1a1008;color:#fff;font-family:'Noto Sans KR',sans-serif;overflow:hidden;height:100vh;width:100vw;}
+#login-screen{display:flex;align-items:center;justify-content:center;height:100vh;background:radial-gradient(ellipse at center,#3a200a 0%,#1a0e04 100%);}
+.login-box{background:#2a1508;border:3px solid #f39c12;padding:2.5rem 2rem;max-width:360px;width:100%;text-align:center;box-shadow:0 0 40px rgba(243,156,18,0.35);}
+.login-box h1{font-family:'Press Start 2P',monospace;font-size:13px;color:#f39c12;margin-bottom:0.5rem;line-height:1.8;text-shadow:0 0 15px #f39c12;}
+.login-emoji{font-size:52px;display:block;margin-bottom:1rem;animation:float 2s ease-in-out infinite;}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.login-box p{font-size:12px;color:#c8a070;margin-bottom:1.5rem;}
+.field{margin-bottom:0.75rem;text-align:left;}
+.field label{display:block;font-family:'Press Start 2P',monospace;font-size:7px;color:#f39c12;margin-bottom:5px;}
+.field input{width:100%;padding:10px 12px;border:2px solid #4a2a10;font-size:13px;font-family:'Noto Sans KR',sans-serif;background:#1a0c04;color:#fff;outline:none;transition:border 0.2s;}
+.field input:focus{border-color:#f39c12;box-shadow:0 0 8px rgba(243,156,18,0.4);}
+.btn-login{width:100%;padding:12px;background:#f39c12;color:#1a0800;border:none;font-family:'Press Start 2P',monospace;font-size:9px;cursor:pointer;margin-top:0.5rem;transition:all 0.15s;}
+.btn-login:hover{background:#e67e22;box-shadow:0 0 15px #f39c12;}
+.login-msg{font-family:'Press Start 2P',monospace;font-size:7px;margin-top:10px;min-height:18px;}
+.login-msg.error{color:#e74c3c;}
+.login-msg.success{color:#2ecc71;}
+#game-screen{display:none;position:relative;width:100vw;height:100vh;}
+canvas{display:block;width:100%;height:100%;image-rendering:pixelated;}
+/* HUD */
+#hud{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:rgba(20,10,2,0.85);border-bottom:2px solid #f39c12;pointer-events:none;z-index:10;}
+.hud-name{font-family:'Press Start 2P',monospace;font-size:8px;color:#f39c12;}
+.hud-score{font-family:'Press Start 2P',monospace;font-size:10px;color:#ffe066;}
+.hud-info{font-family:'Press Start 2P',monospace;font-size:7px;color:#c8a070;}
+#logout-btn{font-family:'Press Start 2P',monospace;font-size:7px;background:none;border:1px solid #5a3a18;color:#a07040;padding:5px 8px;cursor:pointer;pointer-events:all;}
+#logout-btn:hover{border-color:#f39c12;color:#f39c12;}
+/* Side panel */
+#side-panel{position:absolute;right:0;top:175px;bottom:0;width:220px;background:rgba(22,12,3,0.92);border-left:2px solid #f39c12;display:flex;flex-direction:column;z-index:10;overflow:hidden;}
+.sp-title{font-family:'Press Start 2P',monospace;font-size:7px;color:#f39c12;padding:8px 10px;border-bottom:1px solid #3a2008;}
+.ing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:8px;}
+.ing-btn{padding:5px 2px;font-size:10px;border:2px solid #3a2008;cursor:pointer;background:#1c0e04;color:#c8a070;text-align:center;line-height:1.4;font-family:'Noto Sans KR',sans-serif;transition:all 0.12s;}
+.ing-btn:hover{background:#2e1a08;border-color:#888;}
+.ing-btn.on{border-color:#f39c12;background:#2e1a04;color:#f39c12;}
+.bake-btn{margin:0 8px 6px;padding:8px;border:2px solid #4a2a10;font-size:9px;font-family:'Press Start 2P',monospace;cursor:pointer;background:#1c0e04;color:#c8a070;transition:all 0.15s;width:calc(100% - 16px);}
+.bake-btn:hover:not(.baking){border-color:#f39c12;color:#f39c12;}
+.bake-btn.baking{border-color:#f39c12;color:#f39c12;background:#1e1200;}
+.bake-btn.ready{border-color:#2ecc71;color:#2ecc71;background:#041a08;animation:pulse-g 0.6s infinite alternate;}
+@keyframes pulse-g{from{box-shadow:0 0 5px #2ecc71}to{box-shadow:0 0 18px #2ecc71}}
+.prog-track{height:4px;background:#2a1808;margin:0 8px 4px;}
+.prog-fill{height:100%;background:#f39c12;transition:width 0.1s linear;}
+.bake-status{font-family:'Press Start 2P',monospace;font-size:6px;color:#a07848;padding:0 8px 6px;line-height:1.5;}
+.orders-area{flex:1;overflow-y:auto;border-top:1px solid #3a2008;padding:6px;}
+.sp-title2{font-family:'Press Start 2P',monospace;font-size:6px;color:#f39c12;margin-bottom:5px;}
+.order-item{border:1px solid #3a2008;padding:5px 6px;margin-bottom:4px;display:flex;align-items:center;gap:5px;cursor:pointer;transition:all 0.12s;background:#160a02;}
+.order-item.real{border-color:#40c4ff;background:#001422;}
+.order-item.done{opacity:0.35;cursor:default;}
+.order-label{font-family:'Press Start 2P',monospace;font-size:6px;flex:1;line-height:1.7;color:#c8a070;}
+.order-timer{font-family:'Press Start 2P',monospace;font-size:6px;color:#f39c12;}
+.serve-btn{font-family:'Press Start 2P',monospace;font-size:5px;padding:3px 4px;border:1px solid #2ecc71;color:#2ecc71;background:none;cursor:pointer;white-space:nowrap;}
+.serve-btn:disabled{opacity:0.25;cursor:default;}
+/* Keys hint */
+#keys-hint{position:absolute;bottom:12px;left:12px;font-family:'Press Start 2P',monospace;font-size:6px;color:#7a5a30;pointer-events:none;z-index:10;line-height:2;}
+/* Dev Panel */
+#dev-panel{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;overflow:auto;}
+.dev-inner{max-width:700px;margin:40px auto;background:#0d0d0d;border:2px solid #e74c3c;padding:24px;}
+.dev-title{font-family:'Press Start 2P',monospace;font-size:12px;color:#e74c3c;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;}
+.dev-close{background:none;border:1px solid #e74c3c;color:#e74c3c;font-family:'Press Start 2P',monospace;font-size:8px;padding:5px 10px;cursor:pointer;}
+.dev-table{width:100%;border-collapse:collapse;font-size:11px;}
+.dev-table th{font-family:'Press Start 2P',monospace;font-size:7px;color:#f39c12;padding:8px 6px;border-bottom:1px solid #3a2008;text-align:left;}
+.dev-table td{padding:7px 6px;border-bottom:1px solid #1a1a1a;color:#ccc;font-family:'Noto Sans KR',sans-serif;}
+.dev-table tr:hover td{background:#1a0a00;}
+.dev-rank{color:#f39c12;font-family:'Press Start 2P',monospace;font-size:7px;}
+.dev-loading{font-family:'Press Start 2P',monospace;font-size:8px;color:#555;padding:20px;text-align:center;}
+#dev-btn{position:fixed;bottom:14px;right:14px;background:#1a0000;border:1px solid #e74c3c;color:#e74c3c;font-family:'Press Start 2P',monospace;font-size:7px;padding:7px 10px;cursor:pointer;z-index:100;display:none;}
+#dev-btn:hover{background:#e74c3c;color:#fff;}
+
+/* ── 랭킹 패널 ── */
+#ranking-btn{position:fixed;bottom:54px;right:14px;background:#1a0020;border:1px solid #9b59b6;color:#9b59b6;font-family:'Press Start 2P',monospace;font-size:7px;padding:7px 10px;cursor:pointer;z-index:100;display:none;}
+#ranking-btn:hover{background:#9b59b6;color:#fff;}
+#ranking-panel{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:9998;overflow:auto;}
+.rank-inner{max-width:560px;margin:40px auto;background:#0a0010;border:3px solid #9b59b6;padding:24px;}
+.rank-title{font-family:'Press Start 2P',monospace;font-size:12px;color:#9b59b6;text-shadow:0 0 12px #9b59b6;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;}
+.rank-tabs{display:flex;gap:6px;margin-bottom:16px;}
+.rank-tab{font-family:'Press Start 2P',monospace;font-size:7px;padding:6px 10px;border:1px solid #4a2a6a;color:#9b59b6;background:none;cursor:pointer;}
+.rank-tab.active{background:#9b59b6;color:#fff;border-color:#9b59b6;}
+.rank-table{width:100%;border-collapse:collapse;}
+.rank-table th{font-family:'Press Start 2P',monospace;font-size:6px;color:#9b59b6;padding:8px 6px;border-bottom:1px solid #2a1040;text-align:left;}
+.rank-table td{padding:8px 6px;border-bottom:1px solid #150a25;font-family:'Noto Sans KR',sans-serif;font-size:12px;color:#ccc;}
+.rank-table tr:hover td{background:#120820;}
+.rank-num{font-family:'Press Start 2P',monospace;font-size:8px;color:#9b59b6;}
+.rank-crown{font-size:14px;}
+.rank-badge{font-family:'Press Start 2P',monospace;font-size:6px;padding:2px 5px;border-radius:2px;margin-left:4px;}
+.level-bar-wrap{height:4px;background:#1a0a2a;margin:2px 0;border-radius:2px;}
+.level-bar-fill{height:100%;background:linear-gradient(90deg,#9b59b6,#e056fd);border-radius:2px;transition:width 0.4s;}
+/* HUD 레벨 표시 */
+#hud-level{font-family:'Press Start 2P',monospace;font-size:7px;color:#e056fd;display:flex;align-items:center;gap:5px;}
+.hud-lv-bar{width:60px;height:4px;background:#2a1040;border-radius:2px;}
+.hud-lv-fill{height:100%;background:#9b59b6;border-radius:2px;transition:width 0.3s;}
+/* 레벨업 팝업 */
+#lvup-popup{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#0a0018;border:3px solid #e056fd;padding:24px 32px;text-align:center;z-index:99999;animation:lvup-in 0.4s ease;}
+@keyframes lvup-in{from{transform:translate(-50%,-50%) scale(0.5);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+.lvup-title{font-family:'Press Start 2P',monospace;font-size:14px;color:#e056fd;text-shadow:0 0 20px #e056fd;margin-bottom:8px;}
+.lvup-sub{font-family:'Press Start 2P',monospace;font-size:9px;color:#9b59b6;}
+</style>
+</head>
+<body>
+<div id="login-screen">
+  <div class="login-box">
+    <span class="login-emoji">🍕</span>
+    <h1>PIZZA<br>SHOP</h1>
+    <p>로그인하고 피자 장사 시작!</p>
+    <div class="field"><label>NICKNAME</label><input type="text" id="username" placeholder="닉네임" autocomplete="off"></div>
+    <div class="field"><label>PASSWORD</label><input type="password" id="password" placeholder="비밀번호"></div>
+    <div style="display:flex;gap:8px;margin-top:0.5rem;"><button class="btn-login" style="background:#2a1508;color:#f39c12;border:2px solid #f39c12;flex:1" onclick="handleLogin()">▶ 로그인</button><button class="btn-login" style="flex:1" onclick="handleRegister()">✚ 회원가입</button></div>
+    <div class="login-msg" id="login-msg"></div>
+  </div>
+</div>
+
+<div id="game-screen">
+  <div id="hud">
+    <div>
+      <div class="hud-name" id="p-name">-</div>
+      <div class="hud-info">🍕 <span id="p-pizza">0</span>개 완성</div>
+    </div>
+    <div class="hud-score">⭐ <span id="p-score">0</span></div>
+    <div class="hud-score" style="color:#2ecc71;font-size:9px">💰 <span id="p-money">0</span>원</div>
+    <div id="hud-level"><span id="hud-lv-badge">⬜</span><span id="hud-lv-text" style="font-family:'Press Start 2P',monospace;font-size:6px;color:#e056fd">Lv.0</span><div class="hud-lv-bar"><div class="hud-lv-fill" id="hud-lv-fill" style="width:0%"></div></div></div>
+    <button onclick="openShop()" style="font-family:'Press Start 2P',monospace;font-size:7px;background:#1a2a08;border:1px solid #2ecc71;color:#2ecc71;padding:5px 8px;cursor:pointer;pointer-events:all;margin-right:6px;">🛒 상점</button><button id="logout-btn" onclick="logout()">로그아웃</button>
+  </div>
+
+  <canvas id="c"></canvas>
+
+  <div id="side-panel">
+    <div class="sp-title">🥫 재료 선택</div>
+    <div class="ing-grid">
+      <button class="ing-btn" data-ing="토마토소스" onclick="toggleIng(this)">🍅<br><span style="font-size:7px">토마토</span></button>
+      <button class="ing-btn" data-ing="치즈" onclick="toggleIng(this)">🧀<br><span style="font-size:7px">치즈</span></button>
+      <button class="ing-btn" data-ing="바질" onclick="toggleIng(this)">🌿<br><span style="font-size:7px">바질</span></button>
+      <button class="ing-btn" data-ing="페퍼로니" onclick="toggleIng(this)">🥩<br><span style="font-size:7px">페퍼로니</span></button>
+      <button class="ing-btn" data-ing="피망" onclick="toggleIng(this)">🫑<br><span style="font-size:7px">피망</span></button>
+      <button class="ing-btn" data-ing="올리브" onclick="toggleIng(this)">🫒<br><span style="font-size:7px">올리브</span></button>
+    </div>
+    <button class="bake-btn" id="bake-btn" onclick="startBakeBtn()">오븐에 넣기</button>
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="bake-status" id="bake-status">재료 선택 후 굽기</div>
+    <div class="orders-area">
+      <div class="sp-title2">📋 주문 목록</div>
+      <div id="orders-list"></div>
+    </div>
+  </div>
+
+  <div id="keys-hint">WASD / 방향키 이동 &nbsp;|&nbsp; 오븐 앞에서 [G] 굽기</div>
+<!-- 상점 화면 -->
+<div id="shop-screen" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);z-index:9000;overflow:auto;">
+  <div style="max-width:600px;margin:40px auto;background:#0e1a08;border:3px solid #2ecc71;padding:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-family:'Press Start 2P',monospace;font-size:12px;color:#2ecc71;text-shadow:0 0 10px #2ecc71;">🛒 재료 상점</div>
+      <div>
+        <span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#2ecc71;">💰 <span id="shop-money">0</span>원</span>
+        <button onclick="closeShop()" style="font-family:'Press Start 2P',monospace;font-size:7px;background:none;border:1px solid #e74c3c;color:#e74c3c;padding:5px 10px;cursor:pointer;margin-left:12px;">✕ 닫기</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;" id="shop-items"></div>
+  </div>
+</div>
+
+<!-- 인벤토리 패널 (side-panel 위) -->
+<div id="inv-panel" style="position:absolute;right:0;top:50px;width:220px;background:rgba(15,10,3,0.95);border-left:2px solid #2ecc71;border-bottom:2px solid #f39c12;padding:6px 8px;z-index:11;">
+  <div style="font-family:'Press Start 2P',monospace;font-size:6px;color:#2ecc71;margin-bottom:5px;">🎒 인벤토리</div>
+  <div id="inv-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;"></div>
+</div>
+
+</div>
+
+<!-- Dev Button -->
+<button id="ranking-btn" onclick="openRanking()">🏆 랭킹</button>
+<button id="dev-btn" onclick="openDevPanel()">🛠 DEV</button>
+
+<!-- Dev Panel -->
+<div id="dev-panel">
+  <div class="dev-inner">
+    <div class="dev-title">
+      <span>🛠 개발자 패널</span>
+      <button class="dev-close" onclick="closeDevPanel()">✕ 닫기</button>
+    </div>
+    <div id="dev-content"><div class="dev-loading">불러오는 중...</div></div>
+  </div>
+</div>
+
+<script>
+// ===== CONFIG =====
+const SUPABASE_URL = 'https://arwnbwseziywtjhztwfp.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_A1Sl1eHmEJXaiMVTnxB_ig_VTTU06DF';
+const H = {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=representation'};
+const api = async (method, path, body) => {
+  const r = await fetch(SUPABASE_URL+'/rest/v1/'+path,{method,headers:H,body:body?JSON.stringify(body):undefined});
+  const d = await r.json();
+  return d;
+};
+// GET 결과를 항상 배열로 반환
+const apiGet = async (path) => {
+  const d = await api('GET', path);
+  if (Array.isArray(d)) return d;
+  if (d && typeof d === 'object' && !d.code) return [d];
+  return [];
+};
+
+// ===== GAME STATE =====
+let player = null, selectedIngs = [], isBaking = false, completedPizza = null;
+let playerMoney = 2000;
+const inventory = {'토마토소스':0,'치즈':0,'바질':0,'페퍼로니':0,'피망':0,'올리브':0};
+
+// 재료 가격
+const ING_PRICES = {'토마토소스':300,'치즈':400,'바질':250,'페퍼로니':600,'피망':200,'올리브':200};
+const ING_EMOJI = {'토마토소스':'🍅','치즈':'🧀','바질':'🌿','페퍼로니':'🥩','피망':'🫑','올리브':'🫒'};
+
+// 피자 종류별 판매가
+const PIZZA_PRICE = {
+  '마르게리타':1200,'페퍼로니':1600,'바질피자':1300,'야채피자':1400,'스페셜':2200
+};
+
+
+// ── 레벨 시스템 ──
+const LEVEL_THRESHOLDS = [0,100,250,500,900,1500,2400,3600,5200,7500,10000];
+const LEVEL_TITLES = ['견습생','피자알바','반죽장인','소스마스터','치즈왕','오븐신','피자셰프','스타셰프','레전드','그랜드마스터','피자신'];
+const LEVEL_BADGES = ['⬜','🟩','🟦','🟨','🟧','🟥','💜','🖤','⭐','👑','🍕'];
+
+function getLevel(score) {
+  let lv = 0;
+  for (let i = 0; i < LEVEL_THRESHOLDS.length; i++) {
+    if (score >= LEVEL_THRESHOLDS[i]) lv = i;
+  }
+  return lv;
+}
+function getLevelProgress(score) {
+  const lv = getLevel(score);
+  const cur = LEVEL_THRESHOLDS[lv];
+  const next = LEVEL_THRESHOLDS[lv+1];
+  if (!next) return 100;
+  return Math.floor((score - cur) / (next - cur) * 100);
+}
+
+let lastLevel = 0;
+function checkLevelUp() {
+  const newLv = getLevel(player.score);
+  if (newLv > lastLevel) {
+    lastLevel = newLv;
+    showLevelUp(newLv);
+  }
+}
+function showLevelUp(lv) {
+  const pop = document.getElementById('lvup-popup');
+  pop.style.display = 'block';
+  pop.innerHTML = `<div class="lvup-title">LEVEL UP!</div><div style="font-size:32px;margin:10px 0">${LEVEL_BADGES[lv]}</div><div class="lvup-sub">Lv.${lv} ${LEVEL_TITLES[lv]}</div>`;
+  setTimeout(() => { pop.style.display='none'; }, 2800);
+}
+
+// ── 랭킹 패널 ──
+function openRanking() {
+  document.getElementById('ranking-panel').style.display='block';
+  renderRanking('score');
+}
+function closeRanking() {
+  document.getElementById('ranking-panel').style.display='none';
+}
+async function renderRanking(tab) {
+  document.querySelectorAll('.rank-tab').forEach(t => t.classList.toggle('active', t.dataset.tab===tab));
+  const content = document.getElementById('rank-content');
+  content.innerHTML = `<div style="font-family:'Press Start 2P',monospace;font-size:8px;color:#9b59b6;padding:20px;text-align:center">로딩 중...</div>`;
+  
+  let list;
+  if (tab === 'score') {
+    list = await apiGet('players?order=score.desc&limit=20&select=username,score,pizza_count');
+  } else if (tab === 'pizza') {
+    list = await apiGet('players?order=pizza_count.desc&limit=20&select=username,score,pizza_count');
+  } else {
+    const since = new Date(Date.now()-24*60*60*1000).toISOString();
+    list = await apiGet('players?last_seen=gte.'+since+'&order=score.desc&limit=20&select=username,score,pizza_count,last_seen');
+  }
+  
+  if (!list || !list.length) { content.innerHTML='<div style="color:#555;text-align:center;padding:20px">데이터 없음</div>'; return; }
+  
+  const crowns = ['🥇','🥈','🥉'];
+  content.innerHTML = `<table class="rank-table">
+    <tr><th>#</th><th>닉네임</th><th>레벨</th><th>${tab==='pizza'?'피자수':'점수'}</th></tr>
+    ${list.map((p,i) => {
+      const lv = getLevel(p.score);
+      const prog = getLevelProgress(p.score);
+      const isMe = player && p.username === player.username;
+      return `<tr style="${isMe?'background:#1a0a30;':''}">
+        <td class="rank-num">${i<3?crowns[i]:(i+1)}</td>
+        <td style="color:${isMe?'#e056fd':'#ccc'};font-weight:${isMe?'bold':'normal'}">${p.username}${isMe?' ◀':''}</td>
+        <td>
+          <span style="font-family:"Press Start 2P",monospace;font-size:6px;color:#9b59b6">${LEVEL_BADGES[lv]} Lv.${lv}</span>
+          <div class="level-bar-wrap"><div class="level-bar-fill" style="width:${prog}%"></div></div>
+        </td>
+        <td style="font-family:"Press Start 2P",monospace;font-size:8px;color:#ffe066">${tab==='pizza'?p.pizza_count:p.score}</td>
+      </tr>`;
+    }).join('')}
+  </table>`;
+}
+
+// 손님 자동 스폰 타이머
+let custSpawnTimer = 0;
+let custSpawnInterval = 11; // 10~13초
+let customers = [], custTimers = {};
+let realCustomers = [], realChars = [];
+let animFrame, lastTime = 0;
+const keys = {};
+
+// Oven state
+let ovenOpen = false;
+let ovenNear = false; // is player near oven?
+let ovenPrompt = false;
+
+const ORDERS = [
+  {items:['토마토소스','치즈'],label:'마르게리타'},
+  {items:['토마토소스','치즈','페퍼로니'],label:'페퍼로니'},
+  {items:['토마토소스','치즈','바질'],label:'바질피자'},
+  {items:['치즈','피망','올리브'],label:'야채피자'},
+  {items:['토마토소스','치즈','페퍼로니','피망'],label:'스페셜'},
+];
+const AI_NAMES = ['민준','서연','지후','예린','도현','하늘','유진','채원'];
+const SKIN = ['#FDBCB4','#F1C27D','#E8A87C','#C68642','#8D5524'];
+const SHIRTS = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#e91e63'];
+const HAIR = ['#1a1a1a','#5C3317','#DAA520','#8B0000','#4169E1','#2ecc71'];
+
+// ===== CANVAS =====
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// ===== WORLD CONSTANTS =====
+// World is wider than screen - side scrolling
+const WORLD_W = 2200;
+const TILE = 32;
+
+// Layout (world coords)
+const FLOOR_Y = 340; // y of floor surface
+const WALL_Y = 60;   // top of back wall
+const DOOR_X = 80;   // entrance door x
+const DOOR_W = 70;
+const COUNTER_X = 700;
+const COUNTER_W = 400;
+const COUNTER_Y = FLOOR_Y - 55; // top of counter
+const OVEN_X = 1300;
+const OVEN_W = 110;
+const TABLE1_X = 200;
+const TABLE2_X = 390;
+const TABLE3_X = 580;
+const TABLE_Y = FLOOR_Y - 32;
+const TABLE_W = 90;
+const TABLE_H = 32;
+
+// 2인석: 각 테이블에 왼쪽/오른쪽 좌석
+// TABLE_SPOTS: [table0_left, table0_right, table1_left, table1_right, table2_left, table2_right]
+const TABLE_BASES = [TABLE1_X, TABLE2_X, TABLE3_X];
+
+// Bullet holes in walls
+let bulletHoles = []; // {x, y, timer, maxTimer}
+
+// Camera
+let camX = 0;
+
+// ===== PLAYER CHARACTER =====
+const playerChar = {
+  x: 300, y: FLOOR_Y,
+  vx: 0, vy: 0,
+  dir: 1,
+  walkCycle: 0,
+  moving: false,
+  skin: SKIN[0],
+  shirt: '#e74c3c',
+  hair: HAIR[0],
+  name: '',
+  speed: 180,
+};
+
+// ===== AI CUSTOMERS =====
+const LEAVE_QUOTES = [
+  '접어라!', '총 맞고 싶어?', '다신 안 온다!',
+  '이 동네 끝났어', '두고 봐!', '빵야!',
+];
+
+class AiCustomer {
+  constructor(slot) {
+    this.slot = slot;
+    this.x = DOOR_X + 10;
+    this.y = FLOOR_Y;
+    this.skin = SKIN[Math.floor(Math.random()*SKIN.length)];
+    this.shirt = SHIRTS[Math.floor(Math.random()*SHIRTS.length)];
+    this.hair = HAIR[Math.floor(Math.random()*HAIR.length)];
+    this.name = AI_NAMES[Math.floor(Math.random()*AI_NAMES.length)];
+    this.order = ORDERS[Math.floor(Math.random()*ORDERS.length)];
+    this.timeLeft = 32;
+    this.maxTime = 32;
+    this.served = false;
+    this.fadeAlpha = 1;
+    this.walkCycle = 0;
+    this.dir = 1;
+    this.phase = 'enter'; // enter -> wait -> leave
+    this.targetX = TABLE1_X + slot * 80 + 18;
+    this.speed = 90 + Math.random()*40;
+    this.bubble = this.order.label + '\n' + this.order.items.join(', ');
+    this.bubbleTimer = 9999;
+    this.isReal = false;
+    this.shooting = false;
+    this.shootTimer = 0;
+  }
+
+  update(dt) {
+    if (this.shootTimer > 0) { this.shootTimer -= dt; if(this.shootTimer<0) this.shooting=false; }
+    if (this.fadeAlpha < 1 && !this.served) { this.fadeAlpha = Math.max(0, this.fadeAlpha - dt*2); return; }
+    if (this.served) { this.fadeAlpha = Math.max(0, this.fadeAlpha - dt*1.5); return; }
+
+    const dx = this.targetX - this.x;
+    this.walkCycle += dt * 6;
+    if (Math.abs(dx) > 3) {
+      this.dir = dx > 0 ? 1 : -1;
+      this.x += this.dir * this.speed * dt;
+      this.moving = true;
+    } else {
+      this.x = this.targetX;
+      this.moving = false;
+      if (this.phase === 'enter') this.phase = 'wait';
+    }
+    if (this.bubbleTimer > 0) this.bubbleTimer -= dt;
+  }
+
+  startLeave() {
+    this.phase = 'leave';
+    this.targetX = DOOR_X - 20;
+    // Shoot + leave quote
+    const quote = LEAVE_QUOTES[Math.floor(Math.random()*LEAVE_QUOTES.length)];
+    this.bubble = quote;
+    this.bubbleTimer = 2.5;
+    this.shooting = true;
+    this.shootTimer = 0.6;
+    // Spawn bullet holes on the wall/floor area
+    for (let b = 0; b < 2 + Math.floor(Math.random()*3); b++) {
+      bulletHoles.push({
+        x: this.x + (Math.random()-0.5)*120,
+        y: WALL_Y + 20 + Math.random()*(FLOOR_Y - WALL_Y - 30),
+        timer: 5,
+        maxTimer: 5,
+      });
+    }
+  }
+
+  draw(ctx, camX) {
+    ctx.save();
+    ctx.globalAlpha = this.fadeAlpha;
+    drawCharSprite(ctx, this.x - camX, this.y, this.skin, this.shirt, this.hair,
+      this.name, this.dir, this.moving ? this.walkCycle : 0, false, this.isReal, this.shooting);
+    // bubble
+    if (this.bubble && this.bubbleTimer > 0 && !this.served) {
+      drawBubble(ctx, this.x - camX, this.y - 62, this.bubble, this.isReal);
+    }
+    // gun flash
+    if (this.shooting && this.shootTimer > 0.3) {
+      const fx = this.x - camX + this.dir * 22;
+      const fy = this.y - 28;
+      ctx.save();
+      ctx.globalAlpha *= 0.9;
+      ctx.shadowColor = '#ffff00'; ctx.shadowBlur = 20;
+      ctx.font = '18px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('💥', fx, fy);
+      ctx.restore();
+    }
+    // timer bar
+    if (!this.served && !this.shooting) {
+      const pct = this.timeLeft / this.maxTime;
+      const bw = 44;
+      const bx = this.x - camX - bw/2;
+      const by = this.y - 74;
+      ctx.fillStyle = '#222';
+      ctx.fillRect(bx, by, bw, 4);
+      ctx.fillStyle = pct > 0.5 ? '#2ecc71' : pct > 0.25 ? '#f39c12' : '#e74c3c';
+      ctx.fillRect(bx, by, bw * pct, 4);
+    }
+    ctx.restore();
+  }
+}
+
+// ===== DRAW HELPERS =====
+function drawCharSprite(ctx, x, y, skin, shirt, hair, name, dir, walkCycle, isPlayer, isReal, isShooting) {
+  ctx.save();
+  if (dir === -1) { ctx.scale(-1,1); x = -x; }
+
+  const s = 1.6;
+  const walking = walkCycle !== 0;
+  const ls = walking ? Math.sin(walkCycle) * 5 * s : 0;
+  const as = walking ? Math.sin(walkCycle) * 4 * s : 0;
+  const bob = walking ? Math.abs(Math.sin(walkCycle)) * 2 * s : 0;
+  const by = y - bob;
+
+  // Shadow
+  ctx.save(); ctx.globalAlpha *= 0.25;
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.ellipse(x, y, 12*s, 3*s, 0, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // Legs
+  ctx.fillStyle = '#2c3e50';
+  ctx.fillRect(x - 5*s, by - 18*s + ls, 4*s, 16*s);
+  ctx.fillRect(x + 1*s, by - 18*s - ls, 4*s, 16*s);
+  // Shoes
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(x - 6*s, by - 2*s + ls, 7*s, 3*s);
+  ctx.fillRect(x, by - 2*s - ls, 7*s, 3*s);
+  // Body
+  ctx.fillStyle = isPlayer ? '#c0392b' : shirt;
+  ctx.fillRect(x - 7*s, by - 32*s, 14*s, 15*s);
+  // Apron for player
+  if (isPlayer) {
+    ctx.fillStyle = '#f5f5f5';
+    ctx.fillRect(x - 4*s, by - 31*s, 8*s, 13*s);
+  }
+  // Arms
+  ctx.fillStyle = skin;
+  ctx.fillRect(x - 10*s, by - 31*s + as, 4*s, 12*s);
+  ctx.fillRect(x + 6*s, by - 31*s - as, 4*s, 12*s);
+  // Head
+  ctx.fillStyle = skin;
+  ctx.fillRect(x - 6*s, by - 46*s, 12*s, 14*s);
+  // Hair
+  ctx.fillStyle = hair;
+  ctx.fillRect(x - 7*s, by - 48*s, 14*s, 5*s);
+  // Chef hat
+  if (isPlayer) {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x - 6*s, by - 50*s, 12*s, 4*s);
+    ctx.fillRect(x - 4*s, by - 58*s, 8*s, 9*s);
+    ctx.strokeStyle = '#ddd'; ctx.lineWidth = 0.5;
+    ctx.strokeRect(x - 4*s, by - 58*s, 8*s, 9*s);
+  }
+  // Real player badge
+  if (isReal) {
+    ctx.fillStyle = '#40c4ff';
+    ctx.fillRect(x - 5*s, by - 51*s, 10*s, 4*s);
+    ctx.fillStyle = '#003';
+    ctx.font = `${5*s}px 'Press Start 2P', monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('USER', x, by - 48*s);
+  }
+  // Eyes
+  ctx.fillStyle = '#222';
+  ctx.fillRect(x - 4*s, by - 40*s, 2*s, 2*s);
+  ctx.fillRect(x + 2*s, by - 40*s, 2*s, 2*s);
+  // Mouth
+  ctx.fillStyle = '#c0392b';
+  ctx.fillRect(x - 2*s, by - 35*s, 4*s, 1.5*s);
+
+  // Gun when shooting
+  if (isShooting) {
+    ctx.fillStyle = '#333';
+    ctx.fillRect(x + 6*s, by - 28*s, 14*s, 4*s);
+    ctx.fillStyle = '#555';
+    ctx.fillRect(x + 6*s, by - 26*s, 5*s, 7*s);
+  }
+
+  ctx.restore();
+
+  // Name
+  ctx.save();
+  ctx.font = `bold 9px 'Noto Sans KR', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = isPlayer ? '#e74c3c' : (isReal ? '#40c4ff' : '#fff');
+  ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
+  ctx.fillText((isPlayer ? '👨‍🍳 ' : '') + name, x, y - 50*1.6 - (isPlayer ? 12 : 0));
+  ctx.restore();
+}
+
+function drawBubble(ctx, x, y, text, isReal) {
+  const lines = text.split('\n');
+  const bw = 110, lineH = 13;
+  const bh = 10 + lines.length * lineH;
+  const bx = x - bw/2, by = y - bh;
+  ctx.save();
+  ctx.fillStyle = 'rgba(10,0,0,0.9)';
+  ctx.strokeStyle = isReal ? '#40c4ff' : '#e74c3c';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 5);
+  ctx.fill(); ctx.stroke();
+  // tail
+  ctx.beginPath();
+  ctx.moveTo(x-5, y); ctx.lineTo(x+5, y); ctx.lineTo(x, y+7);
+  ctx.fillStyle = 'rgba(10,0,0,0.9)'; ctx.fill();
+  ctx.strokeStyle = isReal ? '#40c4ff' : '#e74c3c'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x-5,y); ctx.lineTo(x,y+7); ctx.lineTo(x+5,y); ctx.stroke();
+  // text
+  ctx.fillStyle = isReal ? '#40c4ff' : '#ffcc00';
+  ctx.font = `9px 'Noto Sans KR', sans-serif`;
+  ctx.textAlign = 'center';
+  lines.forEach((l,i) => ctx.fillText(l, x, by + 12 + i*lineH));
+  ctx.restore();
+}
+
+// ===== DRAW WORLD =====
+function drawWorld(ctx, camX, canvasW, canvasH) {
+  // Sky / ceiling - warm amber lighting
+  const skyGrad = ctx.createLinearGradient(0,0,0,canvasH*0.5);
+  skyGrad.addColorStop(0,'#1a0e04');
+  skyGrad.addColorStop(1,'#2e1a08');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0,0,canvasW,canvasH);
+
+  // === BACK WALL - warm cream/terracotta ===
+  ctx.fillStyle = '#5a3520';
+  ctx.fillRect(-camX, WALL_Y, WORLD_W, FLOOR_Y - WALL_Y);
+
+  // Wall pattern (brick) - warmer tones
+  ctx.strokeStyle = '#4a2a16';
+  ctx.lineWidth = 1;
+  for (let wy = WALL_Y; wy < FLOOR_Y; wy += 18) {
+    for (let wx = -camX % 50; wx < canvasW; wx += 50) {
+      const offset = Math.floor((wy - WALL_Y)/18) % 2 === 0 ? 0 : 25;
+      ctx.strokeRect(wx - camX % 50 - offset, wy, 48, 16);
+    }
+  }
+
+  // Warm ceiling strip lights
+  ctx.save();
+  ctx.shadowColor = '#f39c12'; ctx.shadowBlur = 25;
+  ctx.strokeStyle = '#f39c12'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(0, WALL_Y+2); ctx.lineTo(canvasW, WALL_Y+2); ctx.stroke();
+  // Second light strip - yellow-white
+  ctx.shadowColor = '#ffe066'; ctx.shadowBlur = 15;
+  ctx.strokeStyle = 'rgba(255,220,100,0.4)'; ctx.lineWidth = 8;
+  ctx.beginPath(); ctx.moveTo(0, WALL_Y+2); ctx.lineTo(canvasW, WALL_Y+2); ctx.stroke();
+  ctx.shadowBlur = 0; ctx.restore();
+
+  // Warm ambient light patches on ceiling
+  for (let lx = 200; lx < WORLD_W; lx += 400) {
+    const lpx = lx - camX;
+    if (lpx < -100 || lpx > canvasW + 100) continue;
+    ctx.save();
+    const lg = ctx.createRadialGradient(lpx, WALL_Y+10, 0, lpx, WALL_Y+10, 80);
+    lg.addColorStop(0, 'rgba(255,180,60,0.18)');
+    lg.addColorStop(1, 'rgba(255,180,60,0)');
+    ctx.fillStyle = lg;
+    ctx.fillRect(lpx-80, WALL_Y, 160, 80);
+    ctx.restore();
+  }
+
+  // === SHOP SIGN ===
+  const signX = 800 - camX, signY = WALL_Y + 8;
+  ctx.fillStyle = '#3a1e08';
+  ctx.fillRect(signX, signY, 260, 38);
+  ctx.strokeStyle = '#f39c12'; ctx.lineWidth = 2;
+  ctx.strokeRect(signX, signY, 260, 38);
+  ctx.save();
+  ctx.shadowColor = '#f39c12'; ctx.shadowBlur = 10;
+  ctx.fillStyle = '#ffe066';
+  ctx.font = "bold 14px 'Press Start 2P', monospace";
+  ctx.textAlign = 'center';
+  ctx.fillText('🍕 PIZZA SHOP', signX + 130, signY + 25);
+  ctx.restore();
+
+  // === WINDOWS - warmer light inside ===
+  [[180, WALL_Y+12],[500,WALL_Y+12],[1100,WALL_Y+12],[1500,WALL_Y+12],[1900,WALL_Y+12]].forEach(([wx,wy]) => {
+    const x = wx - camX;
+    if (x < -80 || x > canvasW+20) return;
+    ctx.fillStyle = '#1a1a40';
+    ctx.fillRect(x, wy, 70, 50);
+    ctx.strokeStyle = '#8a5a28'; ctx.lineWidth = 2;
+    ctx.strokeRect(x, wy, 70, 50);
+    // glass - warm glow from outside
+    ctx.save(); ctx.globalAlpha = 0.25;
+    ctx.fillStyle = '#ffe0aa';
+    ctx.fillRect(x+2,wy+2,66,46); ctx.restore();
+    // cross
+    ctx.strokeStyle = '#8a5a28'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x+35,wy); ctx.lineTo(x+35,wy+50); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x,wy+25); ctx.lineTo(x+70,wy+25); ctx.stroke();
+  });
+
+  // === DOOR (entrance) ===
+  const dx = DOOR_X - camX;
+  ctx.fillStyle = '#7a3a18';
+  ctx.fillRect(dx, FLOOR_Y - 90, DOOR_W, 90);
+  ctx.strokeStyle = '#f39c12'; ctx.lineWidth = 2;
+  ctx.strokeRect(dx, FLOOR_Y - 90, DOOR_W, 90);
+  // door panels
+  ctx.fillStyle = '#6a3010';
+  ctx.fillRect(dx+5, FLOOR_Y-85, DOOR_W-10, 35);
+  ctx.fillRect(dx+5, FLOOR_Y-44, DOOR_W-10, 35);
+  // door handle
+  ctx.fillStyle = '#f39c12';
+  ctx.beginPath(); ctx.arc(dx + DOOR_W - 12, FLOOR_Y - 45, 4, 0, Math.PI*2); ctx.fill();
+  // "OPEN" sign - bright green
+  ctx.save();
+  ctx.shadowColor = '#2ecc71'; ctx.shadowBlur = 8;
+  ctx.fillStyle = '#2ecc71';
+  ctx.font = "7px 'Press Start 2P', monospace";
+  ctx.textAlign = 'center';
+  ctx.fillText('OPEN', dx + DOOR_W/2, FLOOR_Y - 96);
+  ctx.restore();
+
+  // Outdoor hint (left of door)
+  if (dx > -100) {
+    ctx.fillStyle = '#2a1a08';
+    ctx.fillRect(dx - 80, WALL_Y, 80, FLOOR_Y - WALL_Y);
+    ctx.strokeStyle = '#1a0e04'; ctx.lineWidth = 1;
+    ctx.strokeRect(dx - 80, WALL_Y, 80, FLOOR_Y - WALL_Y);
+    ctx.fillStyle = '#7a5a30';
+    ctx.font = "7px 'Press Start 2P',monospace";
+    ctx.textAlign = 'center';
+    ctx.fillText('OUTSIDE', dx - 40, FLOOR_Y - 60);
+    // sidewalk
+    ctx.fillStyle = '#3a2a18';
+    ctx.fillRect(dx - 80, FLOOR_Y, 80, canvasH - FLOOR_Y);
+  }
+
+  // === TABLES & CHAIRS (2인석) ===
+  TABLE_BASES.forEach((tx) => {
+    const x = tx - camX;
+    if (x < -120 || x > canvasW + 20) return;
+    const ty = TABLE_Y;
+    // table - warm wood color
+    ctx.fillStyle = '#a05530';
+    ctx.fillRect(x, ty, TABLE_W, TABLE_H);
+    ctx.fillStyle = '#7a3e20';
+    ctx.fillRect(x, ty+TABLE_H, 8, 20);
+    ctx.fillRect(x+TABLE_W-8, ty+TABLE_H, 8, 20);
+    // table cloth - checkered red/white
+    ctx.fillStyle = '#c8402a';
+    ctx.fillRect(x+2, ty+2, TABLE_W-4, 6);
+    ctx.fillStyle = '#e85a40';
+    for(let ci=0;ci<4;ci++) { if(ci%2===0) ctx.fillRect(x+2+ci*(TABLE_W-4)/4, ty+2, (TABLE_W-4)/4, 3); }
+    // small pizza on table
+    ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('🍕', x + TABLE_W/2, ty + 22);
+    // 2 chairs - bright orange-brown
+    ctx.fillStyle = '#c06030';
+    // left chair
+    ctx.fillRect(x-14, ty+8, 12, 26);
+    ctx.fillRect(x-14, ty+4, 12, 8);
+    ctx.fillStyle = '#e07848';
+    ctx.fillRect(x-14, ty+4, 12, 3);
+    // right chair
+    ctx.fillStyle = '#c06030';
+    ctx.fillRect(x+TABLE_W+2, ty+8, 12, 26);
+    ctx.fillRect(x+TABLE_W+2, ty+4, 12, 8);
+    ctx.fillStyle = '#e07848';
+    ctx.fillRect(x+TABLE_W+2, ty+4, 12, 3);
+    // seat label
+    ctx.font = "6px 'Press Start 2P',monospace";
+    ctx.fillStyle = '#a07848';
+    ctx.textAlign = 'center';
+    ctx.fillText('2인석', x + TABLE_W/2, ty - 6);
+  });
+
+  // === BULLET HOLES ===
+  bulletHoles.forEach(h => {
+    const hx = h.x - camX;
+    const pct = h.timer / h.maxTimer;
+    ctx.save();
+    ctx.globalAlpha = Math.min(pct * 3, 1);
+    // crack lines
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      const len = 6 + Math.random() * 4;
+      ctx.beginPath();
+      ctx.moveTo(hx, h.y);
+      ctx.lineTo(hx + Math.cos(angle)*len, h.y + Math.sin(angle)*len);
+      ctx.stroke();
+    }
+    // hole center
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(hx, h.y, 4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#1a0000';
+    ctx.beginPath(); ctx.arc(hx, h.y, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+
+  // === COUNTER ===
+  const cx = COUNTER_X - camX;
+  if (cx < canvasW + 20 && cx + COUNTER_W > -20) {
+    ctx.fillStyle = '#8a4520';
+    ctx.fillRect(cx, COUNTER_Y, COUNTER_W, FLOOR_Y - COUNTER_Y);
+    ctx.fillStyle = '#c07848';
+    ctx.fillRect(cx, COUNTER_Y, COUNTER_W, 12);
+    ctx.strokeStyle = '#6a3010'; ctx.lineWidth = 1;
+    ctx.strokeRect(cx, COUNTER_Y, COUNTER_W, FLOOR_Y - COUNTER_Y);
+    // items on counter
+    ctx.font = '18px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('🍕', cx + 50, COUNTER_Y + 32);
+    ctx.fillText('🧀', cx + 100, COUNTER_Y + 32);
+    ctx.fillText('🍅', cx + 150, COUNTER_Y + 32);
+    ctx.font = "7px 'Press Start 2P',monospace";
+    ctx.fillStyle = '#e0b888';
+    ctx.fillText('COUNTER', cx + COUNTER_W/2, COUNTER_Y - 8);
+  }
+
+  // === OVEN ===
+  const ox = OVEN_X - camX;
+  if (ox < canvasW + 20 && ox + OVEN_W > -20) {
+    const ovenH = 130;
+    const ovenTop = FLOOR_Y - ovenH;
+
+    // Oven body
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(ox, ovenTop, OVEN_W, ovenH);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(ox+3, ovenTop+3, OVEN_W-6, ovenH-6);
+
+    // Oven window / door
+    const doorY = ovenTop + 12;
+    const doorH = 60;
+    const doorW = OVEN_W - 16;
+    const doorX2 = ox + 8;
+
+    if (ovenOpen) {
+      // Open door (flipped down)
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(doorX2, doorY + doorH, doorW, 18);
+      ctx.strokeStyle = '#555'; ctx.lineWidth = 2;
+      ctx.strokeRect(doorX2, doorY + doorH, doorW, 18);
+      // Inside glow
+      ctx.save();
+      ctx.shadowColor = '#ff6600'; ctx.shadowBlur = 30;
+      const fireGrad = ctx.createRadialGradient(ox+OVEN_W/2, doorY+doorH/2, 5, ox+OVEN_W/2, doorY+doorH/2, doorH);
+      fireGrad.addColorStop(0, 'rgba(255,150,0,0.9)');
+      fireGrad.addColorStop(0.5, 'rgba(255,60,0,0.6)');
+      fireGrad.addColorStop(1, 'rgba(30,0,0,0.2)');
+      ctx.fillStyle = fireGrad;
+      ctx.fillRect(doorX2, doorY, doorW, doorH);
+      ctx.restore();
+      // Fire emoji + baking pizza
+      ctx.font = '16px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('🔥', ox+OVEN_W/2 - 14, doorY + doorH/2 + 6);
+      if (isBaking) ctx.fillText('🍕', ox+OVEN_W/2 + 14, doorY + doorH/2 + 6);
+      ctx.font = '10px sans-serif';
+      ctx.fillText('🔥', ox+OVEN_W/2, doorY + 14);
+    } else {
+      // Closed door
+      ctx.fillStyle = '#111';
+      ctx.fillRect(doorX2, doorY, doorW, doorH);
+      ctx.strokeStyle = '#444'; ctx.lineWidth = 2;
+      ctx.strokeRect(doorX2, doorY, doorW, doorH);
+      // Door window (small glass circle)
+      ctx.save();
+      if (isBaking) { ctx.shadowColor = '#ff6600'; ctx.shadowBlur = 12; }
+      ctx.fillStyle = isBaking ? '#ff4400' : '#222';
+      ctx.beginPath(); ctx.arc(ox+OVEN_W/2, doorY+doorH/2, 12, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+      // Door handle bar
+      ctx.fillStyle = '#888';
+      ctx.fillRect(doorX2+6, doorY+doorH-10, doorW-12, 5);
+      ctx.fillStyle = '#aaa';
+      ctx.fillRect(doorX2+6, doorY+doorH-10, doorW-12, 2);
+    }
+
+    // Bottom section: dials
+    const dialY = FLOOR_Y - 28;
+    [ox+18, ox+OVEN_W/2, ox+OVEN_W-18].forEach((kx,ki) => {
+      ctx.fillStyle = isBaking && ki===1 ? '#ff4400' : '#444';
+      ctx.beginPath(); ctx.arc(kx, dialY, 7, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#777';
+      ctx.beginPath(); ctx.arc(kx, dialY, 4, 0, Math.PI*2); ctx.fill();
+      // indicator line
+      const angle = isBaking && ki===1 ? -0.5 : -Math.PI/2;
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(kx, dialY);
+      ctx.lineTo(kx + Math.cos(angle)*4, dialY + Math.sin(angle)*4);
+      ctx.stroke();
+    });
+
+    // OVEN label
+    ctx.font = "7px 'Press Start 2P',monospace";
+    ctx.fillStyle = '#888'; ctx.textAlign = 'center';
+    ctx.fillText('OVEN', ox + OVEN_W/2, FLOOR_Y - 10);
+
+    // Neon border
+    ctx.save();
+    ctx.shadowColor = isBaking ? '#ff6600' : '#ff2200';
+    ctx.shadowBlur = isBaking ? 25 : 12;
+    ctx.strokeStyle = isBaking ? '#ff6600' : '#ff2200';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(ox+1, ovenTop+1, OVEN_W-2, ovenH-2);
+    ctx.restore();
+
+    // [G] proximity prompt
+    if (ovenNear && !isBaking) {
+      const promptX = ox + OVEN_W/2;
+      const promptY = ovenTop - 16;
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.85)';
+      ctx.strokeStyle = '#f39c12';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(promptX - 60, promptY - 14, 120, 20, 4);
+      ctx.fill(); ctx.stroke();
+      ctx.font = "7px 'Press Start 2P',monospace";
+      ctx.fillStyle = '#f39c12';
+      ctx.textAlign = 'center';
+      const label = selectedIngs.length ? '[G] 오븐 열고 굽기' : '[G] 오븐 열기';
+      ctx.fillText(label, promptX, promptY);
+      ctx.restore();
+    }
+    // Baking progress above oven
+    if (isBaking) {
+      const bpx = ox + OVEN_W/2;
+      const bpy = ovenTop - 18;
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.85)';
+      ctx.strokeStyle = '#ff6600'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.roundRect(bpx-50, bpy-14, 100, 20, 4); ctx.fill(); ctx.stroke();
+      ctx.font = "7px 'Press Start 2P',monospace";
+      ctx.fillStyle = '#ff6600'; ctx.textAlign='center';
+      ctx.fillText('🔥 굽는중...', bpx, bpy);
+      ctx.restore();
+    }
+  }
+
+  // === SHELVES (right side) ===
+  const shelfX = 1700 - camX;
+  if (shelfX < canvasW + 20 && shelfX + 150 > -20) {
+    [FLOOR_Y-60, FLOOR_Y-110, FLOOR_Y-160].forEach((sy, si) => {
+      ctx.fillStyle = '#a06030';
+      ctx.fillRect(shelfX, sy, 150, 8);
+      ctx.strokeStyle = '#7a4820'; ctx.lineWidth=1;
+      ctx.strokeRect(shelfX, sy, 150, 8);
+      const items = ['🍅','🧀','🌿','🥩','🫑','🫒'];
+      ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+      for (let ii = 0; ii < 4; ii++) {
+        ctx.fillText(items[(si*4+ii)%items.length], shelfX + 20 + ii*35, sy - 4);
+      }
+    });
+    ctx.fillStyle = '#a06030';
+    ctx.fillRect(shelfX, FLOOR_Y-165, 8, 165);
+    ctx.fillRect(shelfX+142, FLOOR_Y-165, 8, 165);
+    ctx.fillStyle = '#e0b888';
+    ctx.font = "7px 'Press Start 2P',monospace";
+    ctx.fillText('INGREDIENTS', shelfX+75, FLOOR_Y-172);
+  }
+
+  // === FLOOR ===
+  const floorGrad = ctx.createLinearGradient(0, FLOOR_Y, 0, canvasH);
+  floorGrad.addColorStop(0, '#3a2010');
+  floorGrad.addColorStop(1, '#281608');
+  ctx.fillStyle = floorGrad;
+  ctx.fillRect(0, FLOOR_Y, canvasW, canvasH - FLOOR_Y);
+  // floor tiles - warm checkerboard
+  for (let tx = -camX % 48; tx < canvasW; tx += 48) {
+    const col = Math.floor((tx + camX) / 48) % 2 === 0;
+    ctx.fillStyle = col ? '#3e2412' : '#321c0e';
+    ctx.fillRect(tx, FLOOR_Y, 48, canvasH - FLOOR_Y);
+    ctx.strokeStyle = '#281408'; ctx.lineWidth = 0.5;
+    ctx.strokeRect(tx, FLOOR_Y, 48, canvasH - FLOOR_Y);
+  }
+  // floor baseboard
+  ctx.fillStyle = '#7a4820';
+  ctx.fillRect(0, FLOOR_Y, canvasW, 5);
+  ctx.save();
+  ctx.shadowColor = '#f39c12'; ctx.shadowBlur = 8;
+  ctx.fillStyle = '#f39c12';
+  ctx.fillRect(0, FLOOR_Y, canvasW, 2);
+  ctx.restore();
+}
+
+// ===== MAIN LOOP =====
+function loop(ts) {
+  animFrame = requestAnimationFrame(loop);
+  const dt = Math.min((ts - lastTime) / 1000, 0.08);
+  lastTime = ts;
+
+  const W = canvas.width, H = canvas.height;
+  if (W === 0 || H === 0) return;
+
+  // Player movement
+  let dx = 0;
+  if (keys['ArrowLeft'] || keys['a'] || keys['A']) dx = -1;
+  if (keys['ArrowRight'] || keys['d'] || keys['D']) dx = 1;
+  playerChar.moving = dx !== 0;
+  if (dx !== 0) {
+    playerChar.dir = dx;
+    playerChar.x += dx * playerChar.speed * dt;
+    playerChar.x = Math.max(DOOR_X + 10, Math.min(WORLD_W - 50, playerChar.x));
+    playerChar.walkCycle += dt * 7;
+  }
+
+  // Camera follow
+  const targetCamX = playerChar.x - W * 0.45;
+  camX += (targetCamX - camX) * 8 * dt;
+  camX = Math.max(0, Math.min(WORLD_W - W + 220, camX));
+
+  // 손님 자동 스폰 10~13초
+  custSpawnTimer += dt;
+  if (custSpawnTimer >= custSpawnInterval) {
+    custSpawnTimer = 0;
+    custSpawnInterval = 10 + Math.random() * 3; // 10~13초
+    // 빈 슬롯 찾기
+    let emptySlots = [];
+    for (let s = 0; s < 5; s++) {
+      if (!customers[s] || customers[s].served || customers[s].fadeAlpha <= 0) emptySlots.push(s);
+    }
+    if (emptySlots.length > 0) {
+      const slot = emptySlots[Math.floor(Math.random()*emptySlots.length)];
+      spawnAICustomer(slot);
+      renderOrders();
+    }
+  }
+
+  // Oven proximity detection
+  const distToOven = Math.abs(playerChar.x - (OVEN_X + OVEN_W/2));
+  ovenNear = distToOven < 100;
+  if (!ovenNear && ovenOpen && !isBaking) ovenOpen = false;
+
+  // AI customer updates
+  customers.forEach((c, i) => { if (c) c.update(dt); });
+  realChars.forEach((c, i) => { if (c) c.update(dt); });
+
+  // Bullet holes countdown
+  bulletHoles.forEach(h => { h.timer -= dt; });
+  bulletHoles = bulletHoles.filter(h => h.timer > 0);
+
+  // Draw
+  ctx.clearRect(0, 0, W, H);
+  drawWorld(ctx, camX, W, H);
+
+  // Draw AI customers (behind counter? basic depth sort)
+  customers.forEach(c => { if (c) c.draw(ctx, camX); });
+  realChars.forEach(c => { if (c) c.draw(ctx, camX); });
+
+  // Draw player
+  drawCharSprite(ctx, playerChar.x - camX, playerChar.y,
+    playerChar.skin, playerChar.shirt, playerChar.hair,
+    playerChar.name, playerChar.dir,
+    playerChar.moving ? playerChar.walkCycle : 0, true, false);
+}
+
+// ===== SPAWN AI CUSTOMERS =====
+// 5 seats max: 2 at table1, 2 at table2, 1 at table3
+const TABLE_SPOTS = [
+  TABLE1_X + 18, TABLE1_X + 62,
+  TABLE2_X + 18, TABLE2_X + 62,
+  TABLE3_X + 38,
+];
+
+function spawnAICustomer(slot) {
+  const c = new AiCustomer(slot);
+  c.x = DOOR_X + 20;
+  c.targetX = TABLE_SPOTS[slot] !== undefined ? TABLE_SPOTS[slot] : TABLE1_X + 30 + slot * 80;
+  customers[slot] = c;
+
+  if (custTimers[slot]) clearInterval(custTimers[slot]);
+  custTimers[slot] = setInterval(() => {
+    if (!customers[slot] || customers[slot].served) return;
+    customers[slot].timeLeft--;
+    if (customers[slot].timeLeft <= 0) {
+      customers[slot].timeLeft = 0;
+      customers[slot].startLeave();
+      clearInterval(custTimers[slot]);
+      setTimeout(() => { spawnAICustomer(slot); renderOrders(); }, 4000);
+    }
+    renderOrders();
+  }, 1000);
+}
+
+// ===== GAME LOGIC =====
+function renderOrders() {
+  const area = document.getElementById('orders-list');
+  let html = '';
+
+  realCustomers.filter(c => !c.served).forEach((c, i) => {
+    html += `<div class="order-item real">
+      <div class="order-label">👤${c.username}<br>${c.order.label}</div>
+      <div class="order-timer">${c.timeLeft}s</div>
+      <button class="serve-btn" onclick="serveReal(${i})" ${completedPizza&&!c.served?'':'disabled'}>+30</button>
+    </div>`;
+  });
+
+  customers.forEach((c, i) => {
+    if (!c) return;
+    html += `<div class="order-item${c.served?' done':''}">
+      <div class="order-label">🤖${c.name}<br>${c.order.label}</div>
+      <div class="order-timer">${c.timeLeft}s</div>
+      <button class="serve-btn" onclick="serveAI(${i})" ${completedPizza&&!c.served?'':'disabled'}>+20</button>
+    </div>`;
+  });
+
+  area.innerHTML = html || '<div style="font-size:9px;color:#555;padding:8px;text-align:center">손님 없음</div>';
+}
+
+function toggleIng(btn) {
+  const ing = btn.dataset.ing;
+  if (selectedIngs.includes(ing)) {
+    selectedIngs = selectedIngs.filter(i=>i!==ing);
+    btn.classList.remove('on');
+  } else {
+    if ((inventory[ing]||0) <= 0) {
+      document.getElementById('bake-status').textContent = ing + ' 재료가 없어요! 상점에서 구매';
+      return;
+    }
+    selectedIngs.push(ing);
+    btn.classList.add('on');
+  }
+  completedPizza = null; resetBake();
+}
+
+function resetBake() {
+  const btn = document.getElementById('bake-btn');
+  btn.textContent='오븐에 넣기'; btn.className='bake-btn';
+  document.getElementById('prog-fill').style.width='0%';
+  document.getElementById('bake-status').textContent = selectedIngs.length ? selectedIngs.join('+') + ' → [G]로 굽기' : '재료 선택 후 오븐 앞에서 [G]';
+  // 재고 없는 버튼 비활성화 표시
+  document.querySelectorAll('.ing-btn').forEach(b => {
+    const ing = b.dataset.ing;
+    const cnt = inventory[ing]||0;
+    const span = b.querySelector('span');
+    if (span) {
+      if (cnt > 0) {
+        b.style.opacity = '1';
+        span.textContent = ing.length > 3 ? ing.slice(0,3) : ing;
+      } else {
+        b.style.opacity = '0.4';
+      }
+    }
+  });
+}
+
+function startBakeBtn() {
+  // Button click: require being near oven
+  const distToOven = Math.abs(playerChar.x - (OVEN_X + OVEN_W/2));
+  if (distToOven > 100) {
+    document.getElementById('bake-status').textContent = '오븐 앞으로 이동 후 [G]!';
+    return;
+  }
+  if (!selectedIngs.length) { document.getElementById('bake-status').textContent='재료를 선택해주세요!'; return; }
+  startBake();
+}
+
+function startBake() {
+  if (isBaking) return;
+  if (!selectedIngs.length) { document.getElementById('bake-status').textContent='재료를 선택해주세요!'; return; }
+  // 인벤에서 재료 체크
+  for (const ing of selectedIngs) {
+    if ((inventory[ing]||0) <= 0) {
+      document.getElementById('bake-status').textContent = ing + ' 재료 부족!';
+      return;
+    }
+  }
+  // 재료 차감
+  for (const ing of selectedIngs) { inventory[ing]--; }
+  renderInventory();
+  isBaking = true; completedPizza = null; ovenOpen = true;
+  document.getElementById('bake-btn').textContent='굽는 중...';
+  document.getElementById('bake-btn').className='bake-btn baking';
+  let prog = 0;
+  const iv = setInterval(() => {
+    prog += 4;
+    document.getElementById('prog-fill').style.width = Math.min(prog,100)+'%';
+    document.getElementById('bake-status').textContent = '🔥 굽는 중... '+Math.min(prog,100)+'%';
+    if (prog >= 100) {
+      clearInterval(iv); isBaking = false; ovenOpen = false;
+      completedPizza = [...selectedIngs];
+      document.getElementById('bake-btn').textContent='✓ 완성! 서빙';
+      document.getElementById('bake-btn').className='bake-btn ready';
+      document.getElementById('bake-status').textContent='주문목록에서 서빙!';
+      renderOrders();
+    }
+  }, 100);
+}
+
+async function serveAI(slot) {
+  const c = customers[slot];
+  if (!completedPizza || !c || c.served) return;
+  const matched = c.order.items.every(i => completedPizza.includes(i));
+  const bonus = matched ? 20 : 5;
+  const earnings = matched ? (PIZZA_PRICE[c.order.label]||1000) : Math.floor((PIZZA_PRICE[c.order.label]||1000)*0.4);
+  player.score += bonus; player.pizza_count++;
+  playerMoney += earnings;
+  completedPizza = null; c.served = true;
+  clearInterval(custTimers[slot]);
+  c.bubble = matched ? '맛있다! 😊\n+'+earnings+'원' : '그냥 먹지 뭐\n+'+earnings+'원'; c.bubbleTimer = 2.5;
+  setTimeout(() => { c.startLeave(); }, 1400);
+  document.getElementById('bake-status').textContent = (matched?'완벽! ':'서빙! ')+('+'+earnings+'원 +'+bonus+'점');
+  selectedIngs=[]; document.querySelectorAll('.ing-btn').forEach(b=>b.classList.remove('on'));
+  resetBake(); updateUI(); renderOrders(); checkLevelUp();
+  await api('PATCH','players?id=eq.'+player.id,{score:player.score,pizza_count:player.pizza_count});
+  setTimeout(()=>{ spawnAICustomer(slot); renderOrders(); }, 3000);
+}
+
+async function serveReal(idx) {
+  const c = realCustomers[idx];
+  if (!completedPizza || !c || c.served) return;
+  const matched = c.order.items.every(i => completedPizza.includes(i));
+  const bonus = matched ? 30 : 10;
+  const earnings = matched ? Math.floor((PIZZA_PRICE[c.order.label]||1000)*1.3) : Math.floor((PIZZA_PRICE[c.order.label]||1000)*0.5);
+  player.score += bonus; player.pizza_count++;
+  playerMoney += earnings;
+  completedPizza = null; c.served = true;
+  clearInterval(c.timer);
+  if (realChars[idx]) { realChars[idx].served = true; realChars[idx].bubble = matched?'최고예요! 😍\n+'+earnings+'원':'감사해요\n+'+earnings+'원'; realChars[idx].bubbleTimer=2.5; setTimeout(()=>{if(realChars[idx])realChars[idx].startLeave();},1400); }
+  document.getElementById('bake-status').textContent = (matched?'완벽! ':'')+('+'+earnings+'원 +'+bonus+'점 🎉');
+  selectedIngs=[]; document.querySelectorAll('.ing-btn').forEach(b=>b.classList.remove('on'));
+  resetBake(); updateUI(); renderOrders(); checkLevelUp();
+  await api('PATCH','players?id=eq.'+player.id,{score:player.score,pizza_count:player.pizza_count});
+}
+
+function getUserOrder(username) {
+  let h=0;
+  for (let i=0;i<username.length;i++) h=(h*31+username.charCodeAt(i))&0xffffffff;
+  return ORDERS[Math.abs(h)%ORDERS.length];
+}
+
+async function loadOnline() {
+  try {
+    const since = new Date(Date.now()-5*60*1000).toISOString();
+    const list = await apiGet('players?last_seen=gte.'+since+'&order=score.desc&select=username,score');
+    if (!list||!player||!list.length) return;
+    const others = list.filter(p=>p.username!==player.username);
+    const prevNames = realCustomers.map(c=>c.username);
+    const newNames = others.map(p=>p.username);
+
+    others.forEach((p,pi) => {
+      if (!prevNames.includes(p.username)) {
+        const order = getUserOrder(p.username);
+        const rc = new AiCustomer(-1);
+        rc.x = DOOR_X + 20;
+        rc.name = p.username;
+        rc.order = order;
+        rc.isReal = true;
+        rc.timeLeft = 32; rc.maxTime = 32;
+        rc.bubble = order.label+'\n'+order.items.join(', ');
+        rc.skin = SKIN[pi%SKIN.length];
+        rc.shirt = SHIRTS[(pi+3)%SHIRTS.length];
+        rc.hair = HAIR[(pi+2)%HAIR.length];
+        // target: area near counter
+        rc.targetX = COUNTER_X + 50 + pi * 60;
+
+        const newCust = {username:p.username, order, timeLeft:32, maxTime:32, served:false, timer:null};
+        realCustomers.push(newCust);
+        const idx = realCustomers.length-1;
+        realChars[idx] = rc;
+
+        newCust.timer = setInterval(()=>{
+          if (!realCustomers[idx]||realCustomers[idx].served) return;
+          realCustomers[idx].timeLeft--;
+          if (realChars[idx]) realChars[idx].timeLeft = realCustomers[idx].timeLeft;
+          if (realCustomers[idx].timeLeft<=0) {
+            clearInterval(newCust.timer);
+            if (realChars[idx]) { realChars[idx].served=true; realChars[idx].startLeave(); }
+          }
+          renderOrders();
+        },1000);
+      }
+    });
+
+    realCustomers = realCustomers.filter((c,i)=>{
+      if (!newNames.includes(c.username)&&!c.served) {
+        if(c.timer) clearInterval(c.timer);
+        if(realChars[i]) realChars[i].startLeave();
+        return false;
+      }
+      return true;
+    });
+
+    renderOrders();
+  } catch(e){}
+}
+
+function updateUI() {
+  document.getElementById('p-name').textContent = player.username;
+  document.getElementById('p-score').textContent = player.score;
+  document.getElementById('p-pizza').textContent = player.pizza_count;
+  document.getElementById('p-money').textContent = playerMoney.toLocaleString();
+  // 레벨 업데이트
+  const lv = getLevel(player.score);
+  const prog = getLevelProgress(player.score);
+  document.getElementById('hud-lv-badge').textContent = LEVEL_BADGES[lv];
+  document.getElementById('hud-lv-text').textContent = 'Lv.'+lv+' '+LEVEL_TITLES[lv];
+  document.getElementById('hud-lv-fill').style.width = prog+'%';
+  checkLevelUp();
+}
+
+function renderInventory() {
+  const grid = document.getElementById('inv-grid');
+  if (!grid) return;
+  grid.innerHTML = Object.entries(inventory).map(([ing, cnt]) => {
+    const emoji = ING_EMOJI[ing]||'📦';
+    const hasEnough = cnt > 0;
+    return `<div style="background:${hasEnough?'#0e1a04':'#1a0c04'};border:1px solid ${hasEnough?'#2ecc71':'#2a1508'};padding:3px;text-align:center;font-size:9px;">
+      ${emoji}<br><span style="font-family:"Press Start 2P",monospace;font-size:5px;color:${hasEnough?'#2ecc71':'#555'}">${ing.length>3?ing.slice(0,3):ing}<br>x${cnt}</span>
+    </div>`;
+  }).join('');
+}
+
+function openShop() {
+  document.getElementById('shop-screen').style.display='block';
+  document.getElementById('shop-money').textContent = playerMoney.toLocaleString();
+  const items = document.getElementById('shop-items');
+  items.innerHTML = Object.entries(ING_PRICES).map(([ing, price]) => {
+    const emoji = ING_EMOJI[ing]||'📦';
+    const cnt = inventory[ing]||0;
+    return `<div style="background:#0a1a04;border:2px solid #1a4010;padding:12px 8px;text-align:center;border-radius:4px;">
+      <div style="font-size:28px;margin-bottom:6px;">${emoji}</div>
+      <div style="font-family:"Press Start 2P",monospace;font-size:7px;color:#c8e0a0;margin-bottom:4px;">${ing}</div>
+      <div style="font-family:"Press Start 2P",monospace;font-size:7px;color:#2ecc71;margin-bottom:6px;">${price.toLocaleString()}원</div>
+      <div style="font-family:"Press Start 2P",monospace;font-size:6px;color:#888;margin-bottom:8px;">보유: ${cnt}개</div>
+      <button onclick="buyIng('${ing}',1)" style="width:100%;font-family:"Press Start 2P",monospace;font-size:6px;padding:6px;background:#1a4010;border:1px solid #2ecc71;color:#2ecc71;cursor:pointer;margin-bottom:3px;" onmouseover="this.style.background='#2a6020'" onmouseout="this.style.background='#1a4010'">x1 구매</button>
+      <button onclick="buyIng('${ing}',5)" style="width:100%;font-family:"Press Start 2P",monospace;font-size:6px;padding:6px;background:#102a08;border:1px solid #1a8030;color:#1a8030;cursor:pointer;" onmouseover="this.style.background='#1a4010'" onmouseout="this.style.background='#102a08'">x5 구매</button>
+    </div>`;
+  }).join('');
+}
+
+function buyIng(ing, qty) {
+  const price = ING_PRICES[ing] * qty;
+  if (playerMoney < price) {
+    alert('💰 돈이 부족해요! (' + price.toLocaleString() + '원 필요)');
+    return;
+  }
+  playerMoney -= price;
+  inventory[ing] = (inventory[ing]||0) + qty;
+  document.getElementById('shop-money').textContent = playerMoney.toLocaleString();
+  updateUI();
+  renderInventory();
+  // 상점 아이템 새로고침
+  openShop();
+}
+
+function closeShop() {
+  document.getElementById('shop-screen').style.display='none';
+  document.getElementById('ranking-panel').style.display='none';
+  document.getElementById('ranking-btn').style.display='none';
+  document.getElementById('lvup-popup').style.display='none';
+}
+
+// ===== DEV PANEL =====
+let devTab = 'users';
+
+async function openDevPanel() {
+  document.getElementById('dev-panel').style.display='block';
+  renderDevTab();
+}
+
+function closeDevPanel() {
+  document.getElementById('dev-panel').style.display='none';
+}
+
+function switchDevTab(tab) {
+  devTab = tab;
+  renderDevTab();
+}
+
+async function renderDevTab() {
+  const content = document.getElementById('dev-content');
+  const tabBar = `<div style="display:flex;gap:6px;margin-bottom:14px;">
+    <button onclick="switchDevTab('users')" style="font-family:"Press Start 2P",monospace;font-size:7px;padding:6px 10px;border:1px solid ${devTab==='users'?'#f39c12':'#3a2008'};background:${devTab==='users'?'#2a1500':'#0d0d0d'};color:${devTab==='users'?'#f39c12':'#666'};cursor:pointer;">👥 유저 목록</button>
+    <button onclick="switchDevTab('banned')" style="font-family:"Press Start 2P",monospace;font-size:7px;padding:6px 10px;border:1px solid ${devTab==='banned'?'#e74c3c':'#3a2008'};background:${devTab==='banned'?'#1a0000':'#0d0d0d'};color:${devTab==='banned'?'#e74c3c':'#666'};cursor:pointer;">🚫 IP 차단 목록</button>
+  </div>`;
+  content.innerHTML = tabBar + '<div class="dev-loading">불러오는 중...</div>';
+
+  if (devTab === 'users') {
+    try {
+      const list = await apiGet('players?order=score.desc&select=id,username,score,pizza_count,last_seen,ip');
+      if (!list||list.length===0) { content.innerHTML=tabBar+'<div class="dev-loading">유저 없음</div>'; return; }
+      let html = tabBar+`<div style="font-family:"Press Start 2P",monospace;font-size:7px;color:#aaa;margin-bottom:10px;">총 ${list.length}명</div>`;
+      html += `<table class="dev-table"><thead><tr>
+        <th>#</th><th>닉네임</th><th>점수</th><th>피자</th><th>IP</th><th>차단</th>
+      </tr></thead><tbody>`;
+      list.forEach((p,i) => {
+        const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+        const ip = p.ip||'-';
+        html += `<tr>
+          <td class="dev-rank">${medal||('#'+(i+1))}</td>
+          <td>${p.username}</td>
+          <td style="color:#ffe066">${p.score}</td>
+          <td style="color:#f39c12">🍕${p.pizza_count}</td>
+          <td style="color:#666;font-size:10px">${ip}</td>
+          <td><button onclick="banIP('${ip}','${p.username}')" style="font-family:"Press Start 2P",monospace;font-size:5px;padding:3px 5px;border:1px solid #e74c3c;color:#e74c3c;background:none;cursor:pointer;" ${ip==='-'?'disabled':''}>🚫 차단</button></td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      content.innerHTML = html;
+    } catch(e) { content.innerHTML=tabBar+'<div class="dev-loading" style="color:#e74c3c">오류: '+e.message+'</div>'; }
+
+  } else {
+    try {
+      const list = await apiGet('banned_ips?order=created_at.desc&select=id,ip,reason,created_at');
+      let html = tabBar;
+      html += `<div style="display:flex;gap:6px;margin-bottom:10px;">
+        <input id="ban-ip-input" placeholder="IP 직접 입력" style="flex:1;padding:6px 8px;background:#1a0c04;border:1px solid #3a2008;color:#fff;font-size:12px;font-family:'Noto Sans KR',sans-serif;">
+        <input id="ban-reason-input" placeholder="사유" style="flex:1;padding:6px 8px;background:#1a0c04;border:1px solid #3a2008;color:#fff;font-size:12px;font-family:'Noto Sans KR',sans-serif;">
+        <button onclick="banIPManual()" style="font-family:"Press Start 2P",monospace;font-size:6px;padding:6px 8px;border:1px solid #e74c3c;color:#e74c3c;background:#1a0000;cursor:pointer;">차단</button>
+      </div>`;
+      if (!list||list.length===0) { html+='<div class="dev-loading">차단된 IP 없음</div>'; content.innerHTML=html; return; }
+      html += `<table class="dev-table"><thead><tr><th>IP</th><th>사유</th><th>일시</th><th>해제</th></tr></thead><tbody>`;
+      list.forEach(b => {
+        const dt = b.created_at ? new Date(b.created_at).toLocaleString('ko-KR') : '-';
+        html += `<tr>
+          <td style="color:#e74c3c">${b.ip}</td>
+          <td style="color:#aaa">${b.reason||'-'}</td>
+          <td style="color:#555;font-size:10px">${dt}</td>
+          <td><button onclick="unbanIP(${b.id})" style="font-family:"Press Start 2P",monospace;font-size:5px;padding:3px 5px;border:1px solid #2ecc71;color:#2ecc71;background:none;cursor:pointer;">해제</button></td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      content.innerHTML = html;
+    } catch(e) { content.innerHTML=tabBar+'<div class="dev-loading" style="color:#e74c3c">오류: '+e.message+'</div>'; }
+  }
+}
+
+async function banIP(ip, username) {
+  if (ip==='-'||!ip) return;
+  if (!confirm(`${username} (${ip}) 을 차단할까요?`)) return;
+  await api('POST','banned_ips',{ip, reason:'관리자 차단: '+username});
+  alert('차단 완료!');
+  renderDevTab();
+}
+
+async function banIPManual() {
+  const ip = document.getElementById('ban-ip-input').value.trim();
+  const reason = document.getElementById('ban-reason-input').value.trim();
+  if (!ip) { alert('IP를 입력하세요'); return; }
+  await api('POST','banned_ips',{ip, reason: reason||'수동 차단'});
+  alert('차단 완료!');
+  renderDevTab();
+}
+
+async function unbanIP(id) {
+  if (!confirm('차단을 해제할까요?')) return;
+  await api('DELETE','banned_ips?id=eq.'+id, null);
+  alert('해제 완료!');
+  renderDevTab();
+}
+
+// ===== LOGIN =====
+async function getMyIP() {
+  try {
+    const r = await fetch('https://api.ipify.org?format=json');
+    const d = await r.json();
+    return d.ip;
+  } catch(e) { return null; }
+}
+
+async function handleLogin() {
+  const u = document.getElementById('username').value.trim();
+  const pw = document.getElementById('password').value.trim();
+  if (!u||!pw) { setMsg('닉네임과 비밀번호를 입력하세요','error'); return; }
+  setMsg('확인 중...','');
+  try {
+    const myIP = await getMyIP();
+    if (myIP) {
+      const banned = await apiGet('banned_ips?ip=eq.'+encodeURIComponent(myIP)+'&select=id');
+      if (banned&&banned[0]) { setMsg('접속이 차단되었습니다','error'); return; }
+    }
+    const existing = await apiGet('players?username=eq.'+encodeURIComponent(u)+'&select=id,username,score,pizza_count,password_hash');
+    if (!existing||!existing[0]) { setMsg('존재하지 않는 계정이에요','error'); return; }
+    if (existing[0].password_hash!==btoa(pw)) { setMsg('비밀번호가 틀렸어요','error'); return; }
+    player={...existing[0]};
+    if (myIP) await api('PATCH','players?id=eq.'+player.id,{last_seen:new Date().toISOString(), ip:myIP});
+    else await api('PATCH','players?id=eq.'+player.id,{last_seen:new Date().toISOString()});
+    setMsg('어서오세요, '+u+'!','success');
+    setTimeout(startGame, 700);
+  } catch(e) { setMsg('연결 오류: '+e.message,'error'); }
+}
+
+async function handleRegister() {
+  const u = document.getElementById('username').value.trim();
+  const pw = document.getElementById('password').value.trim();
+  if (!u||!pw) { setMsg('닉네임과 비밀번호를 입력하세요','error'); return; }
+  if (u===pw) { setMsg('닉네임과 비밀번호를 다르게 해주세요!','error'); return; }
+  setMsg('확인 중...','');
+  try {
+    const myIP = await getMyIP();
+    if (myIP) {
+      const banned = await apiGet('banned_ips?ip=eq.'+encodeURIComponent(myIP)+'&select=id');
+      if (banned&&banned[0]) { setMsg('접속이 차단되었습니다','error'); return; }
+    }
+    const existing = await apiGet('players?username=eq.'+encodeURIComponent(u)+'&select=id');
+    if (existing&&existing[0]) { setMsg('이미 사용 중인 닉네임이에요','error'); return; }
+    const created = await api('POST','players',{username:u,password_hash:btoa(pw),score:0,pizza_count:0,ip:myIP||null});
+    if (!created||!created[0]) { setMsg('오류가 발생했어요','error'); return; }
+    player={...created[0]};
+    setMsg('계정이 만들어졌어요!','success');
+    await api('PATCH','players?id=eq.'+player.id,{last_seen:new Date().toISOString()});
+    setTimeout(startGame, 700);
+  } catch(e) { setMsg('연결 오류: '+e.message,'error'); }
+}
+
+function setMsg(t,c){const el=document.getElementById('login-msg');el.textContent=t;el.className='login-msg '+c;}
+
+function startGame() {
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('game-screen').style.display='block';
+  canvas.width = window.innerWidth - 220;
+  canvas.height = window.innerHeight - 50;
+  playerChar.name = player.username;
+  playerChar.x = 300;
+  playerMoney = 2000;
+  // 인벤토리 초기화
+  Object.keys(inventory).forEach(k => inventory[k] = 0);
+  updateUI();
+  renderInventory();
+  if (player.username === '(개발자)수박장사') document.getElementById('dev-btn').style.display='block';
+  document.getElementById('ranking-btn').style.display='block';
+  lastLevel = getLevel(player.score);
+  // 초기 손님 2명만
+  spawnAICustomer(0);
+  spawnAICustomer(1);
+  renderOrders();
+  loadOnline();
+  requestAnimationFrame(ts=>{ lastTime=ts; loop(ts); });
+  setInterval(loadOnline, 10000);
+  setInterval(()=>api('PATCH','players?id=eq.'+player.id,{last_seen:new Date().toISOString()}),30000);
+}
+
+function logout() {
+  cancelAnimationFrame(animFrame);
+  player=null; selectedIngs=[]; isBaking=false; completedPizza=null;
+  playerMoney=2000; Object.keys(inventory).forEach(k=>inventory[k]=0);
+  custSpawnTimer=0;
+  Object.values(custTimers).forEach(clearInterval); custTimers={}; customers=[];
+  realCustomers.forEach(c=>{if(c.timer)clearInterval(c.timer);}); realCustomers=[]; realChars=[];
+  document.getElementById('dev-btn').style.display='none';
+  document.getElementById('dev-panel').style.display='none';
+  document.getElementById('shop-screen').style.display='none';
+  document.getElementById('ranking-panel').style.display='none';
+  document.getElementById('ranking-btn').style.display='none';
+  document.getElementById('lvup-popup').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('username').value=''; document.getElementById('password').value='';
+  setMsg('','');
+}
+
+// ===== INPUT =====
+window.addEventListener('keydown', e=>{
+  keys[e.key]=true;
+  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)) e.preventDefault();
+  // G key: open/close oven when near
+  if ((e.key==='g'||e.key==='G') && player) {
+    const distToOven = Math.abs(playerChar.x - (OVEN_X + OVEN_W/2));
+    if (distToOven < 100) {
+      if (!ovenOpen) {
+        // Open oven - start baking if ingredients selected
+        if (selectedIngs.length > 0 && !isBaking) {
+          ovenOpen = true;
+          startBake();
+        } else if (!selectedIngs.length) {
+          document.getElementById('bake-status').textContent = '재료를 먼저 선택!';
+        } else {
+          ovenOpen = !ovenOpen;
+        }
+      } else {
+        ovenOpen = false;
+      }
+    } else {
+      // Show hint that you need to go near oven
+      document.getElementById('bake-status').textContent = '오븐 앞으로 이동하세요!';
+    }
+  }
+});
+window.addEventListener('keyup', e=>{ keys[e.key]=false; });
+window.addEventListener('resize', ()=>{
+  if (player) { canvas.width=window.innerWidth-220; canvas.height=window.innerHeight-50; }
+});
+// Enter on login
+document.addEventListener('keydown', e=>{
+  if (e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none') handleLogin();
+});
+</script>
+</body>
+</html>
