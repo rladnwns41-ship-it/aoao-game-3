@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>워드 7 — 멀티 공포</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+  <link rel="stylesheet" href="src/styles.css" />
+
+  <!-- Three.js (ES modules via importmap) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <!-- Firebase (compat globals) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+</head>
+<body>
+  <div id="game"></div>
+
+  <!-- FX layers -->
+  <div id="grain"></div>
+  <div id="scanlines"></div>
+  <div id="vignette"></div>
+  <div id="peeFx"></div>
+  <div id="scare"><img src="assets/ghostB.png" alt="" /></div>
+  <div id="toast"></div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="crosshair"></div>
+
+    <!-- top-center objective tracker -->
+    <div id="objective">
+      <div class="obj-row">
+        <span class="obj-ico">◈</span>
+        <span id="objText">표본 수집 0 / 6</span>
+      </div>
+      <div class="obj-track"><i id="lootFill"></i></div>
+      <div id="objSub">빛나는 표본을 모아 봉쇄를 해제하라.</div>
+    </div>
+
+    <!-- top-left status -->
+    <div id="statusChip">
+      <span id="status" class="online">● 연결 중…</span>
+      <span class="sep">·</span>
+      <span><b id="playerCount">1</b>명</span>
+      <span class="sep">·</span>
+      <span id="modeBadge" class="mode-team">협동</span>
+    </div>
+    <div id="attackPrompt">밀치기 <b>E</b></div>
+
+    <!-- top-right pee counter -->
+    <div id="peeChip">
+      <span class="pee-n"><span id="peeCount">0</span>💦</span>
+      <span class="pee-lbl">오늘 지린 횟수</span>
+    </div>
+
+    <!-- bottom-left vitals -->
+    <div class="vitals">
+      <div class="vital fear">
+        <span class="v-ico">☠</span>
+        <div class="v-track"><i id="fearFill"></i></div>
+        <span class="v-num" id="fearVal">0</span>
+      </div>
+      <div class="vital">
+        <span class="v-ico">🔦</span>
+        <div class="v-track"><i id="batFill"></i></div>
+      </div>
+      <div class="vital">
+        <span class="v-ico">⚡</span>
+        <div class="v-track"><i id="stamFill"></i></div>
+      </div>
+    </div>
+
+    <div id="hint">
+      <div><b>WASD</b> 이동 · <b>Shift</b> 질주 · <b>F</b> 손전등</div>
+      <div><b>E</b> 가구 들기/설치 · 바리케이드로 귀신을 막아라</div>
+    </div>
+
+    <div id="lockMsg"><div class="lock-inner">🖱 클릭해서 시점 잠금</div></div>
+  </div>
+
+  <!-- End screen (win / eliminated / team result) -->
+  <div id="win">
+    <div class="win-card">
+      <div class="win-kicker" id="winKicker">EXTRACTION COMPLETE</div>
+      <h2 id="winTitle">탈출 성공 🏆</h2>
+      <p id="winStats"></p>
+      <div class="win-btns">
+        <button id="backLobbyBtn">로비로</button>
+        <button id="replayBtn" class="ghost-btn">새로고침</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Menu -->
+  <div id="menu">
+    <div class="card">
+      <div class="kicker">AOAO STUDIO · MULTIPLAYER HORROR</div>
+      <h1 class="title">정신병동 <span class="red">7</span><br />지리는 밤</h1>
+      <p class="subtitle">불 꺼진 병동을 친구들과 함께 헤맨다. 무언가가 우리를 쫓고 있다.
+      공포가 차오르면 결국 <b>지린다</b> 💦. 표본을 모아 탈출하라 — 혹은 서로를 배신하라.</p>
+      <div class="field">
+        <label>이름</label>
+        <input id="nameInput" placeholder="이름을 입력하세요" maxlength="10" />
+      </div>
+      <div class="field">
+        <label>방 코드 <span class="hintlbl">친구와 같은 코드를 입력하면 매칭돼요</span></label>
+        <input id="roomInput" placeholder="WARD7" maxlength="8" value="WARD7" />
+      </div>
+      <button id="startBtn">로비 입장 →</button>
+      <p class="warn">⚠ 소리를 켜세요. 갑작스러운 점프스케어와 큰 소리가 포함되어 있습니다.</p>
+    </div>
+  </div>
+
+  <!-- Lobby -->
+  <div id="lobby">
+    <div class="lobby-card">
+      <div class="lobby-head">
+        <div>
+          <div class="kicker">대기실 · LOBBY</div>
+          <h2>방 <span id="roomCode" class="red">WARD7</span></h2>
+        </div>
+        <button id="copyRoom" class="ghost-btn">코드 복사</button>
+      </div>
+
+      <div class="sec-label">모드 선택</div>
+      <div class="mode-pick">
+        <button class="mode-btn active" data-mode="team">
+          <span class="mode-t">🤝 협동 (TEAM)</span>
+          <span class="mode-d">다 같이 표본을 모아 함께 탈출</span>
+        </button>
+        <button class="mode-btn" data-mode="solo">
+          <span class="mode-t">🔪 각자도생 (SOLO)</span>
+          <span class="mode-d">서로 밀쳐 떨어뜨리고 표본을 뺏는다</span>
+        </button>
+      </div>
+      <div id="modeNote" class="mode-note">호스트만 모드를 바꿀 수 있어요.</div>
+
+      <div class="player-list-wrap">
+        <div class="pl-title">참가자 <span id="lobbyCount">1</span>명</div>
+        <div id="playerList"></div>
+      </div>
+
+      <div class="lobby-actions">
+        <button id="readyBtn" class="ready-btn">준비 완료 ✓</button>
+        <button id="launchBtn" class="launch-btn" disabled>게임 시작</button>
+        <button id="leaveBtn" class="ghost-btn">나가기</button>
+      </div>
+      <div id="lobbyHint" class="lobby-hint">모두 준비하면 호스트가 시작할 수 있어요.</div>
+    </div>
+  </div>
+
+  <div id="boot">불러오는 중…</div>
+
+  <script type="module" src="src/game.js"></script>
+</body>
+</html>
